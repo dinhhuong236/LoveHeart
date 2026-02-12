@@ -1,209 +1,327 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="UTF-8">
 <title>Đình Hường ❤ Khánh Linh</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <style>
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
-html, body {
-  width: 100%;
-  height: 100%;
-  overflow: hidden;
-  background: radial-gradient(circle at top, #120018, #000);
+html,body{
+  margin:0;
+  overflow:hidden;
+  background:#000;
   font-family: "Segoe UI", sans-serif;
+  color:white;
+}
+canvas{
+  position:fixed;
+  top:0;left:0;
+}
+#ui{
+  position:absolute;
+  top:50%;
+  left:50%;
+  transform:translate(-50%,-50%);
+  text-align:center;
+  z-index:10;
+  pointer-events:none;
+}
+#title{
+  font-size:52px;
+  font-weight:bold;
+  background:linear-gradient(90deg,#ff4fd8,#fff,#ff0077,#00ffff);
+  background-size:300% 300%;
+  -webkit-background-clip:text;
+  -webkit-text-fill-color:transparent;
+  text-shadow:0 0 20px rgba(255,0,150,0.8);
+  letter-spacing:2px;
+  animation:glow 2s infinite alternate, gradientMove 6s infinite linear;
+}
+@keyframes glow{
+  from{ text-shadow:0 0 10px #ff00aa;}
+  to{ text-shadow:0 0 40px #ff66ff,0 0 80px #ff0088;}
+}
+@keyframes gradientMove{
+  0%{background-position:0% 50%;}
+  50%{background-position:100% 50%;}
+  100%{background-position:0% 50%;}
 }
 
-/* Canvas nền */
-canvas {
-  position: fixed;
-  top: 0;
-  left: 0;
-  z-index: 0;
+/* glitch chữ hacker */
+.glitch{
+  position:relative;
 }
-
-/* Container trung tâm */
-.center {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  text-align: center;
-  z-index: 2;
+.glitch::before,
+.glitch::after{
+  content:attr(data-text);
+  position:absolute;
+  left:0;
+  top:0;
+  opacity:0.6;
 }
-
-/* Trái tim lớn */
-.heart {
-  width: 160px;
-  height: 160px;
-  background: linear-gradient(45deg, #ff004c, #ff77ff, #ffccff);
-  position: relative;
-  transform: rotate(-45deg);
-  animation: beat 1.2s infinite;
-  box-shadow: 0 0 40px rgba(255,0,100,0.8),
-              0 0 80px rgba(255,0,150,0.6);
+.glitch::before{
+  color:#00ffcc;
+  animation:glitch 2s infinite;
 }
-.heart::before,
-.heart::after {
-  content: "";
-  width: 160px;
-  height: 160px;
-  background: inherit;
-  border-radius: 50%;
-  position: absolute;
+.glitch::after{
+  color:#ff00cc;
+  animation:glitch 1.5s infinite reverse;
 }
-.heart::before {
-  top: -80px;
-  left: 0;
-}
-.heart::after {
-  left: 80px;
-  top: 0;
-}
-
-@keyframes beat {
-  0%, 100% { transform: rotate(-45deg) scale(1); }
-  50% { transform: rotate(-45deg) scale(1.15); }
-}
-
-/* Text */
-.text {
-  margin-top: 40px;
-  font-size: 42px;
-  font-weight: bold;
-  background: linear-gradient(90deg, #ff9ad5, #fff, #ff6cff);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  text-shadow: 0 0 20px rgba(255,100,200,0.8);
-  animation: glow 2s infinite alternate;
-}
-
-@keyframes glow {
-  from { text-shadow: 0 0 10px #ff66cc; }
-  to { text-shadow: 0 0 30px #ffccff, 0 0 60px #ff33aa; }
-}
-
-/* Trái tim bay */
-.floating-heart {
-  position: absolute;
-  font-size: 20px;
-  animation: floatUp linear forwards;
-  pointer-events: none;
-}
-@keyframes floatUp {
-  from {
-    transform: translateY(0) scale(1);
-    opacity: 1;
-  }
-  to {
-    transform: translateY(-600px) scale(1.8);
-    opacity: 0;
-  }
+@keyframes glitch{
+  0%{transform:translate(0,0);}
+  20%{transform:translate(-2px,2px);}
+  40%{transform:translate(2px,-2px);}
+  60%{transform:translate(-1px,1px);}
+  80%{transform:translate(1px,-1px);}
+  100%{transform:translate(0,0);}
 }
 </style>
 </head>
 <body>
 
 <canvas id="bg"></canvas>
+<canvas id="heart"></canvas>
+<canvas id="matrix"></canvas>
 
-<div class="center">
-  <div class="heart"></div>
-  <div class="text" id="loveText"></div>
+<div id="ui">
+  <div id="title" class="glitch" data-text=""></div>
 </div>
 
 <script>
-/* Hiệu ứng typewriter cho chữ */
-const text = "Đình Hường ❤ Khánh Linh";
-let index = 0;
-function typeText() {
-  if (index < text.length) {
-    document.getElementById("loveText").innerHTML += text.charAt(index);
-    index++;
-    setTimeout(typeText, 120);
+  // ================= TEXT TYPEWRITER =================
+  const loveText = "Đình Hường ❤ Khánh Linh";
+  let ti = 0;
+  const titleEl = document.getElementById("title");
+  
+  function typeText(){
+    if(ti < loveText.length){
+      titleEl.innerHTML += loveText[ti];
+      titleEl.setAttribute("data-text", titleEl.innerHTML);
+      ti++;
+      setTimeout(typeText, 120);
+    }
   }
-}
-typeText();
-
-/* Canvas particles nền */
-const canvas = document.getElementById("bg");
-const ctx = canvas.getContext("2d");
-function resize() {
-  canvas.width = window.innerWidth;
-  canvas.height = window.innerHeight;
-}
-window.addEventListener("resize", resize);
-resize();
-
-let particles = [];
-for (let i = 0; i < 150; i++) {
-  particles.push({
-    x: Math.random() * canvas.width,
-    y: Math.random() * canvas.height,
-    r: Math.random() * 2,
-    vx: (Math.random() - 0.5) * 0.3,
-    vy: (Math.random() - 0.5) * 0.3
-  });
-}
-
-function animateParticles() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  particles.forEach(p => {
-    p.x += p.vx;
-    p.y += p.vy;
-    if (p.x < 0) p.x = canvas.width;
-    if (p.x > canvas.width) p.x = 0;
-    if (p.y < 0) p.y = canvas.height;
-    if (p.y > canvas.height) p.y = 0;
-    ctx.beginPath();
-    ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-    ctx.fillStyle = "rgba(255,150,255,0.8)";
-    ctx.fill();
-  });
-  requestAnimationFrame(animateParticles);
-}
-animateParticles();
-
-/* Trái tim bay */
-function createHeart() {
-  const heart = document.createElement("div");
-  heart.className = "floating-heart";
-  heart.innerHTML = "❤";
-  heart.style.left = Math.random() * window.innerWidth + "px";
-  heart.style.bottom = "0px";
-  heart.style.color = `hsl(${Math.random()*360},100%,70%)`;
-  heart.style.animationDuration = (3 + Math.random() * 3) + "s";
-  document.body.appendChild(heart);
-  setTimeout(() => heart.remove(), 6000);
-}
-setInterval(createHeart, 200);
-
-/* Click tạo sóng trái tim */
-document.addEventListener("click", e => {
-  for (let i = 0; i < 10; i++) {
-    const h = document.createElement("div");
-    h.className = "floating-heart";
-    h.innerHTML = "❤";
-    h.style.left = e.clientX + "px";
-    h.style.top = e.clientY + "px";
-    h.style.color = "white";
-    h.style.animationDuration = "2s";
-    document.body.appendChild(h);
-    setTimeout(() => h.remove(), 2000);
+  typeText();
+  
+  // ================= CANVAS SETUP =================
+  const bg = document.getElementById("bg");
+  const heartCanvas = document.getElementById("heart");
+  const matrixCanvas = document.getElementById("matrix");
+  const bctx = bg.getContext("2d");
+  const hctx = heartCanvas.getContext("2d");
+  const mctx = matrixCanvas.getContext("2d");
+  
+  function resize(){
+    [bg, heartCanvas, matrixCanvas].forEach(c=>{
+      c.width = innerWidth;
+      c.height = innerHeight;
+    });
   }
-});
-
-/* Parallax theo chuột */
-document.addEventListener("mousemove", e => {
-  const heart = document.querySelector(".heart");
-  const x = (e.clientX / window.innerWidth - 0.5) * 20;
-  const y = (e.clientY / window.innerHeight - 0.5) * 20;
-  heart.style.transform = `rotate(-45deg) translate(${x}px, ${y}px) scale(1.1)`;
-});
-</script>
+  window.onresize = resize;
+  resize();
+  
+  // ================= MATRIX HACKER RAIN =================
+  const chars = "01ABCDEFGHIJKLMNOPQRSTUVWXYZ#$%&@";
+  const drops = Array(Math.floor(innerWidth/20)).fill(0);
+  
+  function drawMatrix(){
+    mctx.fillStyle = "rgba(0,0,0,0.05)";
+    mctx.fillRect(0,0,matrixCanvas.width,matrixCanvas.height);
+    mctx.fillStyle = "#00ff99";
+    mctx.font = "16px monospace";
+    for(let i=0;i<drops.length;i++){
+      const text = chars[Math.floor(Math.random()*chars.length)];
+      mctx.fillText(text, i*20, drops[i]*20);
+      if(drops[i]*20 > matrixCanvas.height && Math.random() > 0.97){
+        drops[i]=0;
+      }
+      drops[i]++;
+    }
+  }
+  setInterval(drawMatrix,50);
+  
+  // ================= HEART POINTS =================
+  let particles = [];
+  const heartPoints = [];
+  
+  function generateHeartPoints(scale=16){
+    heartPoints.length=0;
+    for(let t=0;t<Math.PI*2;t+=0.02){
+      const x = scale*Math.pow(Math.sin(t),3);
+      const y = -(scale*0.8*(13*Math.cos(t)-5*Math.cos(2*t)-2*Math.cos(3*t)-Math.cos(4*t))/13);
+      heartPoints.push({x,y});
+    }
+  }
+  generateHeartPoints();
+  
+  // ================= INIT PARTICLES =================
+  function initParticles(count=1500){
+    particles=[];
+    for(let i=0;i<count;i++){
+      const p = heartPoints[Math.floor(Math.random()*heartPoints.length)];
+      particles.push({
+        x: Math.random()*innerWidth,
+        y: Math.random()*innerHeight,
+        tx: innerWidth/2 + p.x*16,
+        ty: innerHeight/2 + p.y*16,
+        vx:0, vy:0,
+        size: Math.random()*2+1.5,
+        hue: Math.random()*360
+      });
+    }
+  }
+  initParticles();
+  
+  // ================= HEART ANIMATION =================
+  let time=0;
+  let dissolve=false;
+  let finalMode=false;
+  
+  function animateHeart(){
+    hctx.clearRect(0,0,heartCanvas.width,heartCanvas.height);
+    time+=0.01;
+  
+    const rot = Math.sin(time*0.6)*0.4;
+  
+    particles.forEach(p=>{
+      let dx = p.tx - p.x;
+      let dy = p.ty - p.y;
+  
+      if(dissolve){
+        dx = (Math.random()*innerWidth - p.x);
+        dy = (Math.random()*innerHeight - p.y);
+      }
+  
+      p.vx += dx*0.002;
+      p.vy += dy*0.002;
+      p.vx *= 0.93;
+      p.vy *= 0.93;
+      p.x += p.vx;
+      p.y += p.vy;
+  
+      p.hue = (p.hue + 0.6) % 360;
+  
+      const glow = Math.sin(time*3)*0.5+0.5;
+      const px = innerWidth/2 + (p.x-innerWidth/2)*Math.cos(rot);
+      const py = p.y;
+  
+      hctx.beginPath();
+      hctx.arc(px,py,p.size,0,Math.PI*2);
+      hctx.fillStyle = `hsla(${p.hue},100%,70%,${0.7+glow})`;
+      hctx.fill();
+    });
+  
+    // ===== FINAL BIG HEART EFFECT =====
+    if(finalMode){
+      drawFinalHeart();
+    }
+  
+    requestAnimationFrame(animateHeart);
+  }
+  animateHeart();
+  
+  // ================= NETWORK LINES =================
+  function drawLines(){
+    for(let i=0;i<particles.length;i+=30){
+      for(let j=i+30;j<i+120 && j<particles.length;j++){
+        const a=particles[i], b=particles[j];
+        const d=Math.hypot(a.x-b.x,a.y-b.y);
+        if(d<160){
+          hctx.beginPath();
+          hctx.moveTo(a.x,a.y);
+          hctx.lineTo(b.x,b.y);
+          hctx.strokeStyle="rgba(255,0,200,0.3)";
+          hctx.stroke();
+        }
+      }
+    }
+  }
+  setInterval(drawLines,60);
+  
+  // ================= AURA / ENERGY RINGS =================
+  function drawFinalHeart(){
+    const cx = innerWidth/2;
+    const cy = innerHeight/2;
+    const baseR = 320;
+  
+    // glow halo
+    const grad = hctx.createRadialGradient(cx,cy,baseR*0.2,cx,cy,baseR);
+    grad.addColorStop(0,"rgba(255,0,150,0.5)");
+    grad.addColorStop(1,"rgba(255,0,150,0)");
+    hctx.beginPath();
+    hctx.arc(cx,cy,baseR,0,Math.PI*2);
+    hctx.fillStyle = grad;
+    hctx.fill();
+  
+    // energy rings
+    for(let i=0;i<4;i++){
+      const r = baseR + i*40 + Math.sin(time*2+i)*15;
+      hctx.beginPath();
+      hctx.arc(cx,cy,r,0,Math.PI*2);
+      hctx.strokeStyle=`rgba(255,0,200,${0.2-i*0.03})`;
+      hctx.lineWidth=2;
+      hctx.stroke();
+    }
+  }
+  
+  // ================= SHOCKWAVE CLICK =================
+  document.addEventListener("click",e=>{
+    particles.forEach(p=>{
+      const dx=p.x-e.clientX;
+      const dy=p.y-e.clientY;
+      const d=Math.hypot(dx,dy)+1;
+      p.vx += dx/d*6;
+      p.vy += dy/d*6;
+    });
+  });
+  
+  // ================= BACKGROUND STARS =================
+  let stars=[];
+  for(let i=0;i<350;i++){
+    stars.push({x:Math.random()*innerWidth,y:Math.random()*innerHeight,r:Math.random()*2});
+  }
+  function drawStars(){
+    bctx.clearRect(0,0,bg.width,bg.height);
+    stars.forEach(s=>{
+      bctx.beginPath();
+      bctx.arc(s.x,s.y,s.r,0,Math.PI*2);
+      bctx.fillStyle="white";
+      bctx.fill();
+    });
+    requestAnimationFrame(drawStars);
+  }
+  drawStars();
+  
+  // ================= TEXT FLOAT =================
+  document.addEventListener("mousemove",e=>{
+    const x=(e.clientX/innerWidth-0.5)*25;
+    const y=(e.clientY/innerHeight-0.5)*25;
+    document.getElementById("ui").style.transform=
+      `translate(-50%,-50%) translate(${x}px,${y}px)`;
+  });
+  
+  // ================= CINEMATIC TIMELINE =================
+  
+  // tan rã → ghép lại
+  setInterval(()=>{
+    dissolve=true;
+    setTimeout(()=>dissolve=false,1500);
+  },12000);
+  
+  // ===== FINAL BIG HEART MODE (SAU 20s) =====
+  setTimeout(()=>{
+    finalMode=true;
+  
+    // phóng to hình tim
+    generateHeartPoints(28);
+    initParticles(2500);
+  
+    // chữ bay nhẹ theo tim
+    document.getElementById("title").style.fontSize="64px";
+    document.getElementById("title").style.textShadow="0 0 40px #ff00ff, 0 0 80px #ff0088";
+  
+  },20000);
+  </script>
+  
 
 </body>
 </html>
