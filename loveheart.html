@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Đình Hường ❤ Khánh Linh</title>
+<style>
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: radial-gradient(circle at top, #120018, #000);
+  font-family: "Segoe UI", sans-serif;
+}
+
+/* Canvas nền */
+canvas {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 0;
+}
+
+/* Container trung tâm */
+.center {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  z-index: 2;
+}
+
+/* Trái tim lớn */
+.heart {
+  width: 160px;
+  height: 160px;
+  background: linear-gradient(45deg, #ff004c, #ff77ff, #ffccff);
+  position: relative;
+  transform: rotate(-45deg);
+  animation: beat 1.2s infinite;
+  box-shadow: 0 0 40px rgba(255,0,100,0.8),
+              0 0 80px rgba(255,0,150,0.6);
+}
+.heart::before,
+.heart::after {
+  content: "";
+  width: 160px;
+  height: 160px;
+  background: inherit;
+  border-radius: 50%;
+  position: absolute;
+}
+.heart::before {
+  top: -80px;
+  left: 0;
+}
+.heart::after {
+  left: 80px;
+  top: 0;
+}
+
+@keyframes beat {
+  0%, 100% { transform: rotate(-45deg) scale(1); }
+  50% { transform: rotate(-45deg) scale(1.15); }
+}
+
+/* Text */
+.text {
+  margin-top: 40px;
+  font-size: 42px;
+  font-weight: bold;
+  background: linear-gradient(90deg, #ff9ad5, #fff, #ff6cff);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-shadow: 0 0 20px rgba(255,100,200,0.8);
+  animation: glow 2s infinite alternate;
+}
+
+@keyframes glow {
+  from { text-shadow: 0 0 10px #ff66cc; }
+  to { text-shadow: 0 0 30px #ffccff, 0 0 60px #ff33aa; }
+}
+
+/* Trái tim bay */
+.floating-heart {
+  position: absolute;
+  font-size: 20px;
+  animation: floatUp linear forwards;
+  pointer-events: none;
+}
+@keyframes floatUp {
+  from {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+  to {
+    transform: translateY(-600px) scale(1.8);
+    opacity: 0;
+  }
+}
+</style>
+</head>
+<body>
+
+<canvas id="bg"></canvas>
+
+<div class="center">
+  <div class="heart"></div>
+  <div class="text" id="loveText"></div>
+</div>
+
+<script>
+/* Hiệu ứng typewriter cho chữ */
+const text = "Đình Hường ❤ Khánh Linh";
+let index = 0;
+function typeText() {
+  if (index < text.length) {
+    document.getElementById("loveText").innerHTML += text.charAt(index);
+    index++;
+    setTimeout(typeText, 120);
+  }
+}
+typeText();
+
+/* Canvas particles nền */
+const canvas = document.getElementById("bg");
+const ctx = canvas.getContext("2d");
+function resize() {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+}
+window.addEventListener("resize", resize);
+resize();
+
+let particles = [];
+for (let i = 0; i < 150; i++) {
+  particles.push({
+    x: Math.random() * canvas.width,
+    y: Math.random() * canvas.height,
+    r: Math.random() * 2,
+    vx: (Math.random() - 0.5) * 0.3,
+    vy: (Math.random() - 0.5) * 0.3
+  });
+}
+
+function animateParticles() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  particles.forEach(p => {
+    p.x += p.vx;
+    p.y += p.vy;
+    if (p.x < 0) p.x = canvas.width;
+    if (p.x > canvas.width) p.x = 0;
+    if (p.y < 0) p.y = canvas.height;
+    if (p.y > canvas.height) p.y = 0;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+    ctx.fillStyle = "rgba(255,150,255,0.8)";
+    ctx.fill();
+  });
+  requestAnimationFrame(animateParticles);
+}
+animateParticles();
+
+/* Trái tim bay */
+function createHeart() {
+  const heart = document.createElement("div");
+  heart.className = "floating-heart";
+  heart.innerHTML = "❤";
+  heart.style.left = Math.random() * window.innerWidth + "px";
+  heart.style.bottom = "0px";
+  heart.style.color = `hsl(${Math.random()*360},100%,70%)`;
+  heart.style.animationDuration = (3 + Math.random() * 3) + "s";
+  document.body.appendChild(heart);
+  setTimeout(() => heart.remove(), 6000);
+}
+setInterval(createHeart, 200);
+
+/* Click tạo sóng trái tim */
+document.addEventListener("click", e => {
+  for (let i = 0; i < 10; i++) {
+    const h = document.createElement("div");
+    h.className = "floating-heart";
+    h.innerHTML = "❤";
+    h.style.left = e.clientX + "px";
+    h.style.top = e.clientY + "px";
+    h.style.color = "white";
+    h.style.animationDuration = "2s";
+    document.body.appendChild(h);
+    setTimeout(() => h.remove(), 2000);
+  }
+});
+
+/* Parallax theo chuột */
+document.addEventListener("mousemove", e => {
+  const heart = document.querySelector(".heart");
+  const x = (e.clientX / window.innerWidth - 0.5) * 20;
+  const y = (e.clientY / window.innerHeight - 0.5) * 20;
+  heart.style.transform = `rotate(-45deg) translate(${x}px, ${y}px) scale(1.1)`;
+});
+</script>
+
+</body>
+</html>
