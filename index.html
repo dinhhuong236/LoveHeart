@@ -40,7 +40,7 @@
 
         const messages = ["Đình Hường <3 Khánh Linh", "13.05.2023", "1000 days", "Happy valentine day", "Love you forever"];
         let currentMsgIndex = -1;
-        let state = "WAIT"; 
+        let state = "INTRO"; 
         
         const heartShape = new THREE.Shape();
         heartShape.moveTo(0, 0);
@@ -48,13 +48,14 @@
         heartShape.bezierCurveTo(-0.2, 0, -0.1, 0.1, 0, 0);
         const miniHeartGeo = new THREE.ShapeGeometry(heartShape);
 
-        const countHeart = 6000;
+        // --- HỆ THỐNG HẠT CHÍNH ---
+        const countHeart = 9000;
         const heartMesh = new THREE.InstancedMesh(miniHeartGeo, new THREE.MeshBasicMaterial({ 
             transparent: true, blending: THREE.AdditiveBlending, side: THREE.DoubleSide 
         }), countHeart);
         scene.add(heartMesh);
 
-        const countText = 6500; 
+        const countText = 7000;
         const textMesh = new THREE.InstancedMesh(miniHeartGeo, new THREE.MeshBasicMaterial({ 
             transparent: true, blending: THREE.AdditiveBlending, side: THREE.DoubleSide 
         }), countText);
@@ -62,26 +63,31 @@
         scene.add(textMesh);
 
         const dummy = new THREE.Object3D();
-        const heartPositions = [];
-        const heartTargets = [];
-        const textPositions = [];
+        const heartPos = [];
+        const heartTarget = [];
+        const textPos = [];
         const heartColors = [];
+        const explodeVels = []; // Vận tốc nổ
 
         function isInsideHeart(x, y, z) {
             const x2 = x * x, y2 = y * y, z2 = z * z;
             return Math.pow(x2 + 2.25*y2 + z2 - 1, 3) - x2*z2*z - 0.1125*y2*z2*z <= 0;
         }
 
+        // Khởi tạo
         for (let i = 0; i < countHeart; i++) {
             let pt = new THREE.Vector3();
             do { pt.set((Math.random()-0.5)*3.8, (Math.random()-0.5)*3.8, (Math.random()-0.5)*3.8); } while (!isInsideHeart(pt.x, pt.y, pt.z));
+            
             const target = new THREE.Vector3(pt.x * 4, pt.z * 4, -pt.y * 4);
-            heartTargets.push(target);
-            heartPositions.push(new THREE.Vector3().copy(target));
+            heartTarget.push(target);
+            heartPos.push(new THREE.Vector3((Math.random()-0.5)*50, (Math.random()-0.5)*50, (Math.random()-0.5)*50));
             heartColors.push(new THREE.Color().setHSL(Math.random() * 0.05 + 0.95, 1, 0.7));
+            // Vector nổ: hướng từ tâm ra ngoài
+            explodeVels.push(target.clone().normalize().multiplyScalar(Math.random() * 0.5 + 0.2));
         }
 
-        for (let i = 0; i < countText; i++) textPositions.push(new THREE.Vector3(0, 0, 0));
+        for (let i = 0; i < countText; i++) textPos.push(new THREE.Vector3(0, 0, 0));
 
         function getTextPoints(text) {
             const canvas = document.createElement('canvas');
@@ -91,7 +97,6 @@
             ctx.font = '85px "Great Vibes"';
             ctx.textAlign = 'center';
             ctx.fillText(text, 600, 200);
-            
             const data = ctx.getImageData(0, 0, 1200, 400).data;
             const pts = [];
             for (let y = 0; y < 400; y += 3) {
@@ -104,31 +109,42 @@
             return pts;
         }
 
-        let currentTextPoints = [];
-
+        let currentTextPts = [];
         const fireworks = [];
-        function createFirework() {
-            const pCount = 35;
+
+        // --- PHÁO HOA TẠO HÌNH TRÁI TIM ---
+        function createHeartFirework() {
+            const pCount = 40;
             const geo = new THREE.BufferGeometry();
             const posArr = new Float32Array(pCount * 3);
             const vels = [];
-            const origin = new THREE.Vector3((Math.random()-0.5)*25, -18, (Math.random()-0.5)*10 - 8);
+            
+            // Bắn từ dưới lên và hội tụ theo hình trái tim ở background
+            const originX = (Math.random() - 0.5) * 20;
+            const origin = new THREE.Vector3(originX, -18, -10);
+            
             for(let i=0; i<pCount; i++) {
                 posArr[i*3]=origin.x; posArr[i*3+1]=origin.y; posArr[i*3+2]=origin.z;
-                vels.push(new THREE.Vector3((Math.random()-0.5)*0.2, Math.random()*0.4+0.3, (Math.random()-0.5)*0.2));
+                // Vận tốc bắn lên cao
+                vels.push(new THREE.Vector3(
+                    (Math.random()-0.5)*0.15, 
+                    Math.random()*0.4 + 0.4, 
+                    (Math.random()-0.5)*0.1
+                ));
             }
             geo.setAttribute('position', new THREE.BufferAttribute(posArr, 3));
             const points = new THREE.Points(geo, new THREE.PointsMaterial({
-                size: 0.12, color: new THREE.Color().setHSL(Math.random(), 0.8, 0.6), transparent: true, blending: THREE.AdditiveBlending
+                size: 0.15, color: new THREE.Color().setHSL(Math.random()*0.1 + 0.9, 1, 0.6), 
+                transparent: true, blending: THREE.AdditiveBlending
             }));
             scene.add(points);
-            fireworks.push({ points, vels, life: 1.5 });
+            fireworks.push({ points, vels, life: 1.8 });
         }
 
         function nextMessage() {
             currentMsgIndex++;
             if (currentMsgIndex < messages.length) {
-                currentTextPoints = getTextPoints(messages[currentMsgIndex]);
+                currentTextPts = getTextPoints(messages[currentMsgIndex]);
                 setTimeout(nextMessage, 4000);
             }
         }
@@ -137,15 +153,35 @@
         function animate() {
             requestAnimationFrame(animate);
             const t = clock.getElapsedTime();
+            
+            if (state === "INTRO") {
+                camera.position.z = THREE.MathUtils.lerp(camera.position.z, 15, 0.03);
+                if (camera.position.z < 15.1) {
+                    state = "WAIT";
+                    document.getElementById('overlay').style.display = 'block';
+                }
+            }
+
+            const isExploding = (state === "EXPLODE");
             const isPlaying = (state === "PLAYING");
+            const bgOpacity = (isPlaying || isExploding) ? 0.3 : 1.0;
 
-            // 1. Trái tim 3D Background - SET OPACITY 30%
+            // 1. Cập nhật Trái tim & Hoạt ảnh Nổ
             heartMesh.rotation.y += isPlaying ? 0.002 : 0.008;
-            const bgOpacity = isPlaying ? 0.3 : 1.0; 
-
             for (let i = 0; i < countHeart; i++) {
-                dummy.position.copy(heartPositions[i]);
-                const s = (isPlaying ? 0.3 : 0.55) + Math.sin(t * 2 + i) * 0.1;
+                if (state === "WAIT" || state === "INTRO") {
+                    heartPos[i].lerp(heartTarget[i], 0.04);
+                } else if (isExploding) {
+                    // Hiệu ứng nổ: các hạt bay theo vector vận tốc nổ
+                    heartPos[i].add(explodeVels[i]);
+                } else if (isPlaying) {
+                    // Sau khi nổ thì lơ lửng xung quanh hình dạng ban đầu
+                    const noise = Math.sin(t + i) * 0.005;
+                    heartPos[i].add(new THREE.Vector3(noise, noise, noise));
+                }
+
+                dummy.position.copy(heartPos[i]);
+                const s = (isPlaying ? 0.25 : 0.45) + Math.sin(t * 3 + i) * 0.05;
                 dummy.scale.set(s, s, s);
                 dummy.lookAt(camera.position);
                 dummy.updateMatrix();
@@ -155,15 +191,15 @@
             heartMesh.instanceMatrix.needsUpdate = true;
             heartMesh.instanceColor.needsUpdate = true;
 
-            // 2. Chữ (Độ nét cao)
+            // 2. Chữ
             if (isPlaying) {
                 textMesh.visible = true;
-                const jitter = Math.sin(t * 15) * 0.008; 
+                const jitter = Math.sin(t * 15) * 0.008;
                 for (let i = 0; i < countText; i++) {
-                    const target = currentTextPoints[i % currentTextPoints.length] || new THREE.Vector3(0, -50, 0);
-                    textPositions[i].lerp(new THREE.Vector3(target.x + jitter, target.y + jitter, target.z), 0.08);
-                    dummy.position.copy(textPositions[i]);
-                    dummy.scale.set(0.18, 0.18, 0.18); 
+                    const target = currentTextPts[i % currentTextPts.length] || new THREE.Vector3(0, -50, 0);
+                    textPos[i].lerp(new THREE.Vector3(target.x + jitter, target.y + jitter, target.z), 0.08);
+                    dummy.position.copy(textPos[i]);
+                    dummy.scale.set(0.18, 0.18, 0.18);
                     dummy.lookAt(camera.position);
                     dummy.updateMatrix();
                     textMesh.setMatrixAt(i, dummy.matrix);
@@ -173,16 +209,17 @@
                 textMesh.instanceColor.needsUpdate = true;
             }
 
-            // 3. Pháo hoa - CŨNG GIẢM THEO OPACITY 30%
-            if (Math.random() < 0.06) createFirework();
+            // 3. Pháo hoa
+            if (Math.random() < 0.1) createHeartFirework(); // Bắn dày hơn
             for (let i = fireworks.length - 1; i >= 0; i--) {
                 const f = fireworks[i];
                 const pAttr = f.points.geometry.attributes.position;
                 for (let j = 0; j < 35; j++) {
+                    // Quỹ đạo pháo hoa hơi cong để tạo cảm giác hình vòm trái tim
                     pAttr.setX(j, pAttr.getX(j) + f.vels[j].x);
                     pAttr.setY(j, pAttr.getY(j) + f.vels[j].y);
                     pAttr.setZ(j, pAttr.getZ(j) + f.vels[j].z);
-                    f.vels[j].y -= 0.005;
+                    f.vels[j].y -= 0.006;
                 }
                 pAttr.needsUpdate = true;
                 f.life -= 0.01;
@@ -195,10 +232,15 @@
 
         window.addEventListener('pointerdown', () => {
             if (state === "WAIT") {
-                state = "PLAYING";
+                state = "EXPLODE"; // Kích hoạt trạng thái nổ
                 document.getElementById('overlay').style.display = 'none';
-                for (let i = 0; i < countHeart; i++) { heartPositions[i].multiplyScalar(1.4); }
-                nextMessage();
+                
+                // Sau 0.8 giây nổ thì bắt đầu hiện chữ
+                setTimeout(() => {
+                    state = "PLAYING";
+                    nextMessage();
+                }, 800);
+
                 if (document.documentElement.webkitRequestFullscreen) document.documentElement.webkitRequestFullscreen();
             }
         });
