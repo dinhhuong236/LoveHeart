@@ -3,30 +3,22 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Đình Hường & Khánh Linh</title>
+    <title>Đình Hường ♥ Khánh Linh</title>
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <link href="https://fonts.googleapis.com/css2?family=Great+Vibes&display=swap" rel="stylesheet">
     <style>
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         body { 
-            margin: 0; 
-            overflow: hidden; 
-            background: #000; 
-            touch-action: none; 
-            height: 100vh; 
-            width: 100vw;
+            margin: 0; overflow: hidden; background: #000; touch-action: none; 
+            height: 100vh; width: 100vw;
             padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom) 0;
         }
-        canvas { display: block; width: 100% !important; height: 100% !important; }
         #overlay {
-            position: absolute; 
-            top: 80%; 
-            width: 100%;
+            position: absolute; top: 80%; width: 100%;
             text-align: center; color: #ffb6c1;
             font-family: sans-serif; letter-spacing: 2px;
-            pointer-events: none;
-            font-size: 10px;
+            pointer-events: none; font-size: 10px;
             animation: blink 2s infinite; z-index: 100;
         }
         @keyframes blink { 0%, 100% { opacity: 0.1; } 50% { opacity: 0.8; } }
@@ -43,16 +35,22 @@
         import * as THREE from 'three';
 
         const scene = new THREE.Scene();
-        // Giảm FOV xuống 60 để vật thể trông nhỏ gọn hơn trong màn hình dọc
         const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
         const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
         renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
         document.body.appendChild(renderer.domElement);
 
-        camera.position.z = 22; 
+        camera.position.z = 25; 
 
-        const messages = ["Đình Hường <3 Khánh Linh", "13.05.2023", "1000 days", "Happy Valentine's Day", "Love you forever"];
+        // Tách chữ thành mảng để xử lý đa dòng
+        const messages = [
+            ["Đình Hường", "♥", "Khánh Linh"],
+            ["13.05.2023"],
+            ["1000 days"],
+            ["Happy", "Valentine's Day"],
+            ["Love you", "forever"]
+        ];
         let currentMsgIndex = -1;
         let state = "INTRO"; 
         
@@ -62,13 +60,14 @@
         heartShape.bezierCurveTo(-0.2, 0, -0.1, 0.1, 0, 0);
         const miniHeartGeo = new THREE.ShapeGeometry(heartShape);
 
-        const countHeart = 8500;
+        const countHeart = 9000;
         const heartMesh = new THREE.InstancedMesh(miniHeartGeo, new THREE.MeshBasicMaterial({ 
             transparent: true, blending: THREE.AdditiveBlending, side: THREE.DoubleSide 
         }), countHeart);
         scene.add(heartMesh);
 
-        const countText = 7000;
+        // Tăng số lượng hạt lên 10,000 để chữ mịn hơn
+        const countText = 10000;
         const textMesh = new THREE.InstancedMesh(miniHeartGeo, new THREE.MeshBasicMaterial({ 
             transparent: true, blending: THREE.AdditiveBlending, side: THREE.DoubleSide 
         }), countText);
@@ -76,12 +75,8 @@
         scene.add(textMesh);
 
         const dummy = new THREE.Object3D();
-        const heartPos = [];
-        const heartTarget = [];
-        const textCurrentPos = [];
-        const textTargetPos = [];
-        const heartColors = [];
-        const explodeVels = [];
+        const heartPos = [], heartTarget = [], heartColors = [], explodeVels = [];
+        const textCurrentPos = [], textTargetPos = [];
 
         function isInsideHeart(x, y, z) {
             const x2 = x * x, y2 = y * y, z2 = z * z;
@@ -91,11 +86,11 @@
         for (let i = 0; i < countHeart; i++) {
             let pt = new THREE.Vector3();
             do { pt.set((Math.random()-0.5)*3.5, (Math.random()-0.5)*3.5, (Math.random()-0.5)*3.5); } while (!isInsideHeart(pt.x, pt.y, pt.z));
-            const target = new THREE.Vector3(pt.x * 3.5, pt.z * 3.5, -pt.y * 3.5);
+            const target = new THREE.Vector3(pt.x * 3.8, pt.z * 3.8, -pt.y * 3.8);
             heartTarget.push(target);
-            heartPos.push(new THREE.Vector3((Math.random()-0.5)*30, (Math.random()-0.5)*60, (Math.random()-0.5)*20));
+            heartPos.push(new THREE.Vector3((Math.random()-0.5)*50, (Math.random()-0.5)*80, (Math.random()-0.5)*40));
             heartColors.push(new THREE.Color().setHSL(Math.random() * 0.05 + 0.95, 1, 0.7));
-            explodeVels.push(target.clone().normalize().multiplyScalar(Math.random() * 0.9 + 0.6));
+            explodeVels.push(target.clone().normalize().multiplyScalar(Math.random() * 1.2 + 0.8));
         }
 
         for (let i = 0; i < countText; i++) {
@@ -103,25 +98,26 @@
             textTargetPos.push(new THREE.Vector3(0, 0, 0));
         }
 
-        function getTextPoints(text) {
+        function getTextPoints(lines) {
             const canvas = document.createElement('canvas');
             const ctx = canvas.getContext('2d');
-            canvas.width = 1200; canvas.height = 400;
+            canvas.width = 1000; canvas.height = 1000;
             ctx.fillStyle = 'white';
-            // Scale font chữ dựa trên độ dài để không tràn màn hình
-            const fontSize = text.length > 20 ? 60 : 75;
-            ctx.font = fontSize + 'px "Great Vibes"';
+            ctx.font = '80px "Great Vibes"';
             ctx.textAlign = 'center';
-            ctx.fillText(text, 600, 200);
             
-            const data = ctx.getImageData(0, 0, 1200, 400).data;
+            // Vẽ từng dòng chữ
+            lines.forEach((line, index) => {
+                const yOffset = 500 + (index - (lines.length - 1) / 2) * 110;
+                ctx.fillText(line, 500, yOffset);
+            });
+            
+            const data = ctx.getImageData(0, 0, 1000, 1000).data;
             const pts = [];
-            // Điều chỉnh tỉ lệ scale (0.018) để chữ luôn nằm trong Safe Area của iPhone
-            const scaleFactor = 0.018; 
-            for (let y = 0; y < 400; y += 3) {
-                for (let x = 0; x < 1200; x += 3) {
-                    if (data[(y * 1200 + x) * 4 + 3] > 150) {
-                        pts.push(new THREE.Vector3((x - 600) * scaleFactor, -(y - 200) * scaleFactor, 3)); 
+            for (let y = 0; y < 1000; y += 3) {
+                for (let x = 0; x < 1000; x += 3) {
+                    if (data[(y * 1000 + x) * 4 + 3] > 120) {
+                        pts.push(new THREE.Vector3((x - 500) * 0.025, -(y - 500) * 0.025, 3)); 
                     }
                 }
             }
@@ -133,23 +129,51 @@
             if (currentMsgIndex < messages.length) {
                 const pts = getTextPoints(messages[currentMsgIndex]);
                 for (let i = 0; i < countText; i++) {
-                    const target = pts[i % pts.length] || new THREE.Vector3(0, 0, 0);
+                    const target = pts[i % pts.length] || new THREE.Vector3(0, -50, 0);
                     textTargetPos[i].copy(target);
-                    // Hạt bay từ không gian 3D về
-                    textCurrentPos[i].set((Math.random()-0.5)*30, (Math.random()-0.5)*50, (Math.random()-0.5)*20);
+                    textCurrentPos[i].set((Math.random()-0.5)*40, (Math.random()-0.5)*60, (Math.random()-0.5)*30);
                 }
                 setTimeout(nextMessage, 5000);
             }
         }
 
         const fireworks = [];
+        
+        // PHÁO HOA NỔ THẬT
+        function createRealFirework() {
+            const color = new THREE.Color().setHSL(Math.random(), 1, 0.6);
+            const pCount = 120;
+            const geo = new THREE.BufferGeometry();
+            const posArr = new Float32Array(pCount * 3);
+            const vels = [];
+            const origin = new THREE.Vector3((Math.random()-0.5)*15, Math.random()*10, -5);
+
+            for(let i=0; i<pCount; i++) {
+                posArr[i*3]=origin.x; posArr[i*3+1]=origin.y; posArr[i*3+2]=origin.z;
+                const theta = Math.random() * Math.PI * 2;
+                const phi = Math.random() * Math.PI;
+                const speed = Math.random() * 0.2 + 0.1;
+                vels.push(new THREE.Vector3(
+                    Math.sin(phi) * Math.cos(theta) * speed,
+                    Math.sin(phi) * Math.sin(theta) * speed,
+                    Math.cos(phi) * speed
+                ));
+            }
+            geo.setAttribute('position', new THREE.BufferAttribute(posArr, 3));
+            const mat = new THREE.PointsMaterial({ size: 0.1, color: color, transparent: true, blending: THREE.AdditiveBlending });
+            const points = new THREE.Points(geo, mat);
+            scene.add(points);
+            fireworks.push({ points, vels, life: 1.2, type: 'real' });
+        }
+
+        // PHÁO HOA HÌNH TIM & PHỤT (CŨ)
         function createHeartFirework(isAerial = true) {
             const pCount = isAerial ? 80 : 15;
             const geo = new THREE.BufferGeometry();
             const posArr = new Float32Array(pCount * 3);
             const vels = [];
-            const centerX = (Math.random() - 0.5) * 10; // Thu hẹp vùng pháo để vừa màn dọc
-            const centerY = isAerial ? Math.random() * 6 + 4 : -16;
+            const centerX = (Math.random() - 0.5) * 12;
+            const centerY = isAerial ? Math.random() * 8 + 5 : -16;
             const centerZ = -10;
 
             for(let i=0; i<pCount; i++) {
@@ -158,18 +182,17 @@
                     const t = Math.random() * Math.PI * 2;
                     const vx = 16 * Math.pow(Math.sin(t), 3);
                     const vy = 13 * Math.cos(t) - 5 * Math.cos(2*t) - 2 * Math.cos(3*t) - Math.cos(4*t);
-                    const speed = 0.015;
-                    vels.push(new THREE.Vector3(vx * speed, vy * speed, (Math.random()-0.5) * 0.05));
+                    vels.push(new THREE.Vector3(vx * 0.015, vy * 0.015, (Math.random()-0.5)*0.05));
                 } else {
                     vels.push(new THREE.Vector3((Math.random()-0.5)*0.08, Math.random()*0.4 + 0.3, (Math.random()-0.5)*0.08));
                 }
             }
             geo.setAttribute('position', new THREE.BufferAttribute(posArr, 3));
             const points = new THREE.Points(geo, new THREE.PointsMaterial({
-                size: 0.12, color: new THREE.Color().setHSL(Math.random()*0.1 + 0.9, 1, 0.6), transparent: true, blending: THREE.AdditiveBlending, depthWrite: false
+                size: 0.1, color: new THREE.Color().setHSL(Math.random()*0.1+0.9, 1, 0.6), transparent: true, blending: THREE.AdditiveBlending
             }));
             scene.add(points);
-            fireworks.push({ points, vels, life: 1.5, isAerial });
+            fireworks.push({ points, vels, life: 1.5, type: 'heart' });
         }
 
         const clock = new THREE.Clock();
@@ -193,7 +216,7 @@
                     heartPos[i].add(explodeVels[i]);
                 }
                 dummy.position.copy(heartPos[i]);
-                const s = (state === "PLAYING" ? 0.18 : 0.38) + Math.sin(t * 3 + i) * 0.05;
+                const s = (state === "PLAYING" ? 0.15 : 0.35) + Math.sin(t * 3 + i) * 0.05;
                 dummy.scale.set(s, s, s);
                 dummy.lookAt(camera.position);
                 dummy.updateMatrix();
@@ -208,7 +231,7 @@
                 for (let i = 0; i < countText; i++) {
                     textCurrentPos[i].lerp(textTargetPos[i], 0.06);
                     dummy.position.copy(textCurrentPos[i]);
-                    dummy.scale.set(0.14, 0.14, 0.14);
+                    dummy.scale.set(0.12, 0.12, 0.12); // Trái tim nhỏ hơn cho chữ
                     dummy.lookAt(camera.position);
                     dummy.updateMatrix();
                     textMesh.setMatrixAt(i, dummy.matrix);
@@ -217,8 +240,9 @@
                 textMesh.instanceMatrix.needsUpdate = true;
                 textMesh.instanceColor.needsUpdate = true;
                 
-                if (Math.random() < 0.05) createHeartFirework(true);
-                if (Math.random() < 0.09) createHeartFirework(false);
+                if (Math.random() < 0.03) createRealFirework(); // Bắn pháo nổ thật
+                if (Math.random() < 0.04) createHeartFirework(true);
+                if (Math.random() < 0.08) createHeartFirework(false);
             }
 
             for (let i = fireworks.length - 1; i >= 0; i--) {
@@ -228,12 +252,12 @@
                     pAttr.setX(j, pAttr.getX(j) + f.vels[j].x);
                     pAttr.setY(j, pAttr.getY(j) + f.vels[j].y);
                     pAttr.setZ(j, pAttr.getZ(j) + f.vels[j].z);
-                    if (!f.isAerial) f.vels[j].y -= 0.008;
-                    else f.vels[j].multiplyScalar(0.98);
+                    f.vels[j].y -= 0.004; // Trọng lực
+                    f.vels[j].multiplyScalar(0.98); // Lực cản không khí
                 }
                 pAttr.needsUpdate = true;
                 f.life -= 0.01;
-                f.points.material.opacity = f.life * bgOpacity;
+                f.points.material.opacity = f.life;
                 if (f.life <= 0) { scene.remove(f.points); fireworks.splice(i, 1); }
             }
             renderer.render(scene, camera);
@@ -251,17 +275,12 @@
         }
 
         window.addEventListener('mousedown', startApp);
-        window.addEventListener('touchstart', (e) => { 
-            e.preventDefault(); 
-            startApp(); 
-        }, { passive: false });
-
+        window.addEventListener('touchstart', (e) => { e.preventDefault(); startApp(); }, { passive: false });
         window.addEventListener('resize', () => {
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
         });
-
         animate();
     </script>
 </body>
