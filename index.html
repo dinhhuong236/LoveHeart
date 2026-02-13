@@ -48,7 +48,6 @@
         heartShape.bezierCurveTo(-0.2, 0, -0.1, 0.1, 0, 0);
         const miniHeartGeo = new THREE.ShapeGeometry(heartShape);
 
-        // --- HỆ THỐNG HẠT CHÍNH ---
         const countHeart = 9000;
         const heartMesh = new THREE.InstancedMesh(miniHeartGeo, new THREE.MeshBasicMaterial({ 
             transparent: true, blending: THREE.AdditiveBlending, side: THREE.DoubleSide 
@@ -67,24 +66,21 @@
         const heartTarget = [];
         const textPos = [];
         const heartColors = [];
-        const explodeVels = []; // Vận tốc nổ
+        const explodeVels = [];
 
         function isInsideHeart(x, y, z) {
             const x2 = x * x, y2 = y * y, z2 = z * z;
             return Math.pow(x2 + 2.25*y2 + z2 - 1, 3) - x2*z2*z - 0.1125*y2*z2*z <= 0;
         }
 
-        // Khởi tạo
         for (let i = 0; i < countHeart; i++) {
             let pt = new THREE.Vector3();
             do { pt.set((Math.random()-0.5)*3.8, (Math.random()-0.5)*3.8, (Math.random()-0.5)*3.8); } while (!isInsideHeart(pt.x, pt.y, pt.z));
-            
             const target = new THREE.Vector3(pt.x * 4, pt.z * 4, -pt.y * 4);
             heartTarget.push(target);
             heartPos.push(new THREE.Vector3((Math.random()-0.5)*50, (Math.random()-0.5)*50, (Math.random()-0.5)*50));
             heartColors.push(new THREE.Color().setHSL(Math.random() * 0.05 + 0.95, 1, 0.7));
-            // Vector nổ: hướng từ tâm ra ngoài
-            explodeVels.push(target.clone().normalize().multiplyScalar(Math.random() * 0.5 + 0.2));
+            explodeVels.push(target.clone().normalize().multiplyScalar(Math.random() * 0.6 + 0.3));
         }
 
         for (let i = 0; i < countText; i++) textPos.push(new THREE.Vector3(0, 0, 0));
@@ -112,40 +108,48 @@
         let currentTextPts = [];
         const fireworks = [];
 
-        // --- PHÁO HOA TẠO HÌNH TRÁI TIM ---
-        function createHeartFirework() {
-            const pCount = 40;
+        // --- HỆ THỐNG PHÁO HOA NỔ HÌNH TRÁI TIM ---
+        function createHeartFirework(isAerial = true) {
+            const pCount = isAerial ? 80 : 20; // Aerial nhiều hạt hơn để ra hình
             const geo = new THREE.BufferGeometry();
             const posArr = new Float32Array(pCount * 3);
             const vels = [];
             
-            // Bắn từ dưới lên và hội tụ theo hình trái tim ở background
-            const originX = (Math.random() - 0.5) * 20;
-            const origin = new THREE.Vector3(originX, -18, -10);
-            
+            // Điểm nổ hoặc điểm xuất phát pháo phụt
+            const centerX = (Math.random() - 0.5) * 20;
+            const centerY = isAerial ? Math.random() * 5 + 5 : -18;
+            const centerZ = -12;
+
             for(let i=0; i<pCount; i++) {
-                posArr[i*3]=origin.x; posArr[i*3+1]=origin.y; posArr[i*3+2]=origin.z;
-                // Vận tốc bắn lên cao
-                vels.push(new THREE.Vector3(
-                    (Math.random()-0.5)*0.15, 
-                    Math.random()*0.4 + 0.4, 
-                    (Math.random()-0.5)*0.1
-                ));
+                posArr[i*3] = centerX; posArr[i*3+1] = centerY; posArr[i*3+2] = centerZ;
+                
+                if (isAerial) {
+                    // PHÁO TẦM CAO: Nổ bung theo phương trình hình tim 2D
+                    const t = Math.random() * Math.PI * 2;
+                    const vx = 16 * Math.pow(Math.sin(t), 3);
+                    const vy = 13 * Math.cos(t) - 5 * Math.cos(2*t) - 2 * Math.cos(3*t) - Math.cos(4*t);
+                    const speed = 0.015;
+                    vels.push(new THREE.Vector3(vx * speed, vy * speed, (Math.random()-0.5) * 0.05));
+                } else {
+                    // PHÁO PHỤT: Bắn thẳng lên và tủa nhẹ
+                    vels.push(new THREE.Vector3((Math.random()-0.5)*0.1, Math.random()*0.5 + 0.3, (Math.random()-0.5)*0.1));
+                }
             }
+            
             geo.setAttribute('position', new THREE.BufferAttribute(posArr, 3));
+            const color = new THREE.Color().setHSL(Math.random() * 0.1 + 0.9, 1, 0.6);
             const points = new THREE.Points(geo, new THREE.PointsMaterial({
-                size: 0.15, color: new THREE.Color().setHSL(Math.random()*0.1 + 0.9, 1, 0.6), 
-                transparent: true, blending: THREE.AdditiveBlending
+                size: 0.15, color: color, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false
             }));
             scene.add(points);
-            fireworks.push({ points, vels, life: 1.8 });
+            fireworks.push({ points, vels, life: isAerial ? 1.5 : 1.0, isAerial });
         }
 
         function nextMessage() {
             currentMsgIndex++;
             if (currentMsgIndex < messages.length) {
                 currentTextPts = getTextPoints(messages[currentMsgIndex]);
-                setTimeout(nextMessage, 4000);
+                setTimeout(nextMessage, 4500);
             }
         }
 
@@ -162,26 +166,20 @@
                 }
             }
 
-            const isExploding = (state === "EXPLODE");
-            const isPlaying = (state === "PLAYING");
-            const bgOpacity = (isPlaying || isExploding) ? 0.3 : 1.0;
+            const isPlaying = (state === "PLAYING" || state === "EXPLODE");
+            const bgOpacity = (state === "PLAYING") ? 0.3 : 1.0;
 
-            // 1. Cập nhật Trái tim & Hoạt ảnh Nổ
-            heartMesh.rotation.y += isPlaying ? 0.002 : 0.008;
+            // 1. Trái tim & Nổ
+            heartMesh.rotation.y += (state === "PLAYING") ? 0.002 : 0.008;
             for (let i = 0; i < countHeart; i++) {
                 if (state === "WAIT" || state === "INTRO") {
                     heartPos[i].lerp(heartTarget[i], 0.04);
-                } else if (isExploding) {
-                    // Hiệu ứng nổ: các hạt bay theo vector vận tốc nổ
+                } else if (state === "EXPLODE") {
                     heartPos[i].add(explodeVels[i]);
-                } else if (isPlaying) {
-                    // Sau khi nổ thì lơ lửng xung quanh hình dạng ban đầu
-                    const noise = Math.sin(t + i) * 0.005;
-                    heartPos[i].add(new THREE.Vector3(noise, noise, noise));
                 }
 
                 dummy.position.copy(heartPos[i]);
-                const s = (isPlaying ? 0.25 : 0.45) + Math.sin(t * 3 + i) * 0.05;
+                const s = (state === "PLAYING" ? 0.25 : 0.45) + Math.sin(t * 3 + i) * 0.05;
                 dummy.scale.set(s, s, s);
                 dummy.lookAt(camera.position);
                 dummy.updateMatrix();
@@ -192,7 +190,7 @@
             heartMesh.instanceColor.needsUpdate = true;
 
             // 2. Chữ
-            if (isPlaying) {
+            if (state === "PLAYING") {
                 textMesh.visible = true;
                 const jitter = Math.sin(t * 15) * 0.008;
                 for (let i = 0; i < countText; i++) {
@@ -209,17 +207,21 @@
                 textMesh.instanceColor.needsUpdate = true;
             }
 
-            // 3. Pháo hoa
-            if (Math.random() < 0.1) createHeartFirework(); // Bắn dày hơn
+            // 3. Pháo hoa (Luôn bắn sau khi bắt đầu)
+            if (isPlaying) {
+                if (Math.random() < 0.04) createHeartFirework(true); // Pháo hình tim
+                if (Math.random() < 0.08) createHeartFirework(false); // Pháo phụt
+            }
+
             for (let i = fireworks.length - 1; i >= 0; i--) {
                 const f = fireworks[i];
                 const pAttr = f.points.geometry.attributes.position;
-                for (let j = 0; j < 35; j++) {
-                    // Quỹ đạo pháo hoa hơi cong để tạo cảm giác hình vòm trái tim
+                for (let j = 0; j < f.vels.length; j++) {
                     pAttr.setX(j, pAttr.getX(j) + f.vels[j].x);
                     pAttr.setY(j, pAttr.getY(j) + f.vels[j].y);
                     pAttr.setZ(j, pAttr.getZ(j) + f.vels[j].z);
-                    f.vels[j].y -= 0.006;
+                    if (!f.isAerial) f.vels[j].y -= 0.008; // Pháo phụt rơi nhanh hơn
+                    else f.vels[j].multiplyScalar(0.98); // Pháo hình tim chậm dần để giữ dáng
                 }
                 pAttr.needsUpdate = true;
                 f.life -= 0.01;
@@ -232,15 +234,12 @@
 
         window.addEventListener('pointerdown', () => {
             if (state === "WAIT") {
-                state = "EXPLODE"; // Kích hoạt trạng thái nổ
+                state = "EXPLODE";
                 document.getElementById('overlay').style.display = 'none';
-                
-                // Sau 0.8 giây nổ thì bắt đầu hiện chữ
                 setTimeout(() => {
                     state = "PLAYING";
                     nextMessage();
                 }, 800);
-
                 if (document.documentElement.webkitRequestFullscreen) document.documentElement.webkitRequestFullscreen();
             }
         });
