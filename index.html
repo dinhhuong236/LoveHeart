@@ -12,7 +12,7 @@
             text-align: center; color: #ffb6c1;
             font-family: sans-serif; letter-spacing: 2px;
             pointer-events: none; font-size: 10px; opacity: 0.8;
-            animation: blink 2s infinite;
+            animation: blink 2s infinite; z-index: 10;
         }
         @keyframes blink { 0%, 100% { opacity: 0.3; } 50% { opacity: 0.8; } }
     </style>
@@ -31,7 +31,7 @@
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
         const renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.setPixelRatio(window.devicePixelRatio);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
         document.body.appendChild(renderer.domElement);
 
         camera.position.z = 15;
@@ -45,7 +45,7 @@
         ];
         let currentMsgIndex = -1;
         let state = "HEART"; 
-        const count = 9000; 
+        const count = 8000; 
 
         // --- MINI HEART GEOMETRY ---
         const heartShape = new THREE.Shape();
@@ -76,7 +76,7 @@
             const z = (Math.random() - 0.5) * 3.5;
             if (isInsideHeart(x, y, z)) {
                 heartTargetPositions.push(new THREE.Vector3(x * 4, z * 4, -y * 4));
-                positions.push(new THREE.Vector3((Math.random()-0.5)*40, (Math.random()-0.5)*40, (Math.random()-0.5)*40));
+                positions.push(new THREE.Vector3((Math.random()-0.5)*50, (Math.random()-0.5)*50, (Math.random()-0.5)*50));
                 colors.push(new THREE.Color().setHSL(Math.random() * 0.1 + 0.95, 0.8, 0.8));
                 found++;
             }
@@ -104,34 +104,40 @@
 
         let currentTextPts = [];
 
-        // --- FIREWORKS (Tạo background trái tim khi nổ) ---
-        const fwGroup = new THREE.Group();
-        scene.add(fwGroup);
-        let fireworks = [];
+        // --- HỆ THỐNG PHÁO HOA SIÊU MƯỢT ---
+        const fireworks = [];
         function createFirework() {
-            const pCount = 40;
-            const fGeo = new THREE.BufferGeometry();
-            const fPos = new Float32Array(pCount * 3);
-            const vels = [];
-            // Bắn từ dưới lên
-            const origin = new THREE.Vector3((Math.random()-0.5)*12, -15, (Math.random()-0.5)*5);
-            for(let i=0; i<pCount; i++) {
-                fPos[i*3]=origin.x; fPos[i*3+1]=origin.y; fPos[i*3+2]=origin.z;
-                vels.push(new THREE.Vector3((Math.random()-0.5)*0.15, Math.random()*0.3 + 0.2, (Math.random()-0.5)*0.1));
+            const pCount = 30;
+            const geometry = new THREE.BufferGeometry();
+            const posArray = new Float32Array(pCount * 3);
+            const velocities = [];
+            const origin = new THREE.Vector3((Math.random() - 0.5) * 15, -15, (Math.random() - 0.5) * 5);
+            
+            for (let i = 0; i < pCount; i++) {
+                posArray[i * 3] = origin.x;
+                posArray[i * 3 + 1] = origin.y;
+                posArray[i * 3 + 2] = origin.z;
+                velocities.push(new THREE.Vector3((Math.random() - 0.5) * 0.2, Math.random() * 0.4 + 0.2, (Math.random() - 0.5) * 0.1));
             }
-            fGeo.setAttribute('position', new THREE.BufferAttribute(fPos, 3));
-            const color = new THREE.Color().setHSL(Math.random(), 0.8, 0.6);
-            const fMat = new THREE.PointsMaterial({ size: 0.15, color: color, transparent: true, blending: THREE.AdditiveBlending });
-            const p = new THREE.Points(fGeo, fMat);
-            fwGroup.add(p);
-            fireworks.push({ p, vels, life: 1.5, type: Math.random() > 0.5 ? 'heart' : 'spark' });
+            
+            geometry.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
+            const material = new THREE.PointsMaterial({
+                size: 0.12,
+                color: new THREE.Color().setHSL(Math.random(), 1, 0.6),
+                transparent: true,
+                blending: THREE.AdditiveBlending
+            });
+            
+            const points = new THREE.Points(geometry, material);
+            scene.add(points);
+            fireworks.push({ points, velocities, life: 1.0 });
         }
 
         function nextMessage() {
             currentMsgIndex++;
             if (currentMsgIndex < messages.length) {
                 currentTextPts = getTextPoints(messages[currentMsgIndex]);
-                setTimeout(nextMessage, 4500); 
+                setTimeout(nextMessage, 4000); 
             }
         }
 
@@ -141,68 +147,81 @@
             const t = clock.getElapsedTime();
             const jitter = Math.sin(t * 8) * 0.015;
 
+            // Xoay Group tổng thể chậm rãi
+            if (state === "HEART") iMesh.rotation.y += 0.003; 
+
             for (let i = 0; i < count; i++) {
                 let target = new THREE.Vector3();
                 if (state === "HEART") {
                     target.copy(heartTargetPositions[i]);
-                    iMesh.rotation.y += 0.00005; // XOAY RẤT CHẬM (Tốc độ giảm 10 lần)
                 } else if (state === "EXPLODE") {
-                    target.copy(positions[i]).multiplyScalar(1.2); 
+                    // Bay ra xa nhanh
+                    target.copy(positions[i]).multiplyScalar(1.1);
                 } else if (state === "TEXT") {
                     const pt = currentTextPts[i % currentTextPts.length];
                     target.set(pt.x + jitter, pt.y + jitter, pt.z);
-                    iMesh.rotation.y *= 0.95;
-                    iMesh.material.opacity = 0.6; // Opacity 50-60% cho chữ
                 }
 
-                positions[i].lerp(target, state === "EXPLODE" ? 0.15 : 0.04);
+                positions[i].lerp(target, state === "EXPLODE" ? 0.1 : 0.05);
                 dummy.position.copy(positions[i]);
-                const s = (state === "TEXT" ? 0.3 : 0.45) + Math.sin(t * 3 + i) * 0.1;
+                
+                const s = (state === "TEXT" ? 0.35 : 0.5) + Math.sin(t * 3 + i) * 0.1;
                 dummy.scale.set(s, s, s);
                 dummy.lookAt(camera.position);
                 dummy.updateMatrix();
                 iMesh.setMatrixAt(i, dummy.matrix);
+                
+                // Giảm độ đậm khi thành chữ
+                const alpha = state === "TEXT" ? 0.5 : 1.0;
+                iMesh.setColorAt(i, colors[i].clone().multiplyScalar(alpha));
             }
 
             iMesh.instanceMatrix.needsUpdate = true;
+            if (iMesh.instanceColor) iMesh.instanceColor.needsUpdate = true;
 
-            // Update Pháo hoa background
-            if (Math.random() < 0.04) createFirework();
-            fireworks.forEach((f, idx) => {
-                const attr = f.p.geometry.attributes.position;
-                for(let i=0; i<40; i++) {
-                    attr.setXYZ(i, attr.getX(i)+f.vels[i].x, attr.getY(i)+f.vels[i].y, attr.getZ(i)+f.vels[i].z);
-                    f.vels[i].y -= 0.002; // Gravity
+            // Xử lý Pháo hoa - Đảm bảo luôn chạy
+            if (Math.random() < 0.06) createFirework();
+            for (let i = fireworks.length - 1; i >= 0; i--) {
+                const f = fireworks[i];
+                const positionsAttr = f.points.geometry.attributes.position;
+                for (let j = 0; j < 30; j++) {
+                    positionsAttr.setX(j, positionsAttr.getX(j) + f.velocities[j].x);
+                    positionsAttr.setY(j, positionsAttr.getY(j) + f.velocities[j].y);
+                    positionsAttr.setZ(j, positionsAttr.getZ(j) + f.velocities[j].z);
+                    f.velocities[j].y -= 0.005; // Trọng lực
                 }
-                attr.needsUpdate = true;
-                f.life -= 0.01; f.p.material.opacity = f.life;
-                if(f.life <= 0) { fwGroup.remove(f.p); fireworks.splice(idx, 1); }
-            });
+                positionsAttr.needsUpdate = true;
+                f.life -= 0.01;
+                f.points.material.opacity = f.life;
+                if (f.life <= 0) {
+                    scene.remove(f.points);
+                    f.points.geometry.dispose();
+                    f.points.material.dispose();
+                    fireworks.splice(i, 1);
+                }
+            }
 
             renderer.render(scene, camera);
         }
 
-        // --- FULLSCREEN & ORIENTATION ---
-        function toggleFullScreen() {
-            if (!document.fullscreenElement) {
-                document.documentElement.requestFullscreen().catch(e => {});
-            }
+        // --- FULLSCREEN ---
+        function openFullscreen() {
+            const elem = document.documentElement;
+            if (elem.requestFullscreen) elem.requestFullscreen();
+            else if (elem.webkitRequestFullscreen) elem.webkitRequestFullscreen();
+            else if (elem.msRequestFullscreen) elem.msRequestFullscreen();
         }
 
         window.addEventListener('resize', () => {
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
-            // Tự động vào fullscreen khi xoay ngang trên một số trình duyệt hỗ trợ
-            if (window.innerHeight < window.innerWidth) {
-                toggleFullScreen();
-            }
+            if (window.innerWidth > window.innerHeight) openFullscreen();
         });
 
-        // --- SỰ KIỆN CLICK ---
         window.addEventListener('pointerdown', () => {
-            toggleFullScreen(); // Vào fullscreen khi bắt đầu tương tác
             if (state === "HEART") {
+                openFullscreen();
                 state = "EXPLODE";
                 document.getElementById('overlay').style.display = 'none';
                 setTimeout(() => {
