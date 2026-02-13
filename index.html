@@ -5,71 +5,142 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Đình Hường ❤ Khánh Linh</title>
 
+<!-- Wedding font hỗ trợ tiếng Việt -->
+<link href="https://fonts.googleapis.com/css2?family=Great+Vibes&family=Playfair+Display:wght@600&display=swap" rel="stylesheet">
+
 <style>
 html,body{
     margin:0;
     padding:0;
-    overflow:hidden;
     background:black;
-    font-family: "Helvetica Neue", sans-serif;
+    overflow:hidden;
 }
+
 canvas{
     position:fixed;
     top:0;
     left:0;
 }
+
+.frame{
+    position:fixed;
+    top:50%;
+    left:50%;
+    transform:translate(-50%,-50%);
+    width:100vw;
+    aspect-ratio:9/16;
+    max-height:100vh;
+    overflow:hidden;
+}
+
+.textContainer{
+    position:absolute;
+    width:100%;
+    height:100%;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    pointer-events:none;
+}
+
+.loveText{
+    position:absolute;
+    font-family:'Great Vibes', cursive;
+    font-size: clamp(28px, 6vw, 60px);
+    color:white;
+    text-align:center;
+    text-shadow:0 0 15px #ff66b2,0 0 25px #ff1493;
+}
 </style>
 </head>
+
 <body>
 
-<canvas id="canvas"></canvas>
+<div class="frame">
+    <canvas id="canvas"></canvas>
+    <div class="textContainer">
+        <div id="left" class="loveText">Đình Hường</div>
+        <div id="heart" class="loveText"><3</div>
+        <div id="right" class="loveText">Khánh Linh</div>
+    </div>
+</div>
 
 <script>
 const canvas = document.getElementById("canvas");
 const ctx = canvas.getContext("2d");
 
 function resize(){
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
+    canvas.width = canvas.parentElement.offsetWidth;
+    canvas.height = canvas.parentElement.offsetHeight;
 }
 resize();
 window.addEventListener("resize",resize);
 
 let particles=[];
 let fireworks=[];
-let mode=0; //0 = heart3D, 1 = text
-let transitionTime=0;
+let startTime=Date.now();
+let phase=0;
+
+function drawHeart(x,y,size,color,alpha=1){
+    ctx.save();
+    ctx.globalAlpha=alpha;
+    ctx.translate(x,y);
+    ctx.scale(size,size);
+    ctx.beginPath();
+    ctx.moveTo(0,0);
+    ctx.bezierCurveTo(0,-3,-5,-3,-5,0);
+    ctx.bezierCurveTo(-5,3,0,6,0,8);
+    ctx.bezierCurveTo(0,6,5,3,5,0);
+    ctx.bezierCurveTo(5,-3,0,-3,0,0);
+    ctx.fillStyle=color;
+    ctx.fill();
+    ctx.restore();
+}
+
+function heartPoints(scale){
+    let pts=[];
+    for(let t=0;t<Math.PI*2;t+=0.02){
+        let x=16*Math.pow(Math.sin(t),3);
+        let y=-(13*Math.cos(t)-5*Math.cos(2*t)-2*Math.cos(3*t)-Math.cos(4*t));
+        let dist=Math.sqrt(x*x+y*y);
+        if(dist>12){ // chỉ viền
+            pts.push({
+                x:canvas.width/2 + x*scale,
+                y:canvas.height/2 + y*scale
+            });
+        }
+    }
+    return pts;
+}
+
+let mainHeart=heartPoints(Math.min(canvas.width,canvas.height)/40);
 
 class Particle{
-    constructor(x,y,size,color){
+    constructor(x,y,targetX,targetY,color){
         this.x=x;
         this.y=y;
-        this.size=size;
+        this.tx=targetX;
+        this.ty=targetY;
         this.color=color;
-        this.vx=(Math.random()-0.5)*4;
-        this.vy=(Math.random()-0.5)*4;
-        this.alpha=1;
+        this.size=Math.random()*0.8+0.4;
+        this.speed=0.05+Math.random()*0.05;
     }
     update(){
-        this.x+=this.vx;
-        this.y+=this.vy;
-        this.alpha-=0.01;
+        this.x += (this.tx-this.x)*this.speed;
+        this.y += (this.ty-this.y)*this.speed;
     }
     draw(){
-        ctx.globalAlpha=this.alpha;
-        drawHeart(this.x,this.y,this.size,this.color);
-        ctx.globalAlpha=1;
+        drawHeart(this.x,this.y,this.size,this.color,0.9);
     }
 }
 
 class Firework{
     constructor(){
         this.x=Math.random()*canvas.width;
-        this.y=Math.random()*canvas.height*0.5;
-        this.size=Math.random()*6+4;
-        this.count=Math.random()*30+40;
+        this.y=Math.random()*canvas.height*0.4;
         this.p=[];
-        for(let i=0;i<this.count;i++){
+        let count=Math.random()*40+30;
+        for(let i=0;i<count;i++){
             let angle=Math.random()*Math.PI*2;
             let speed=Math.random()*3+2;
             this.p.push({
@@ -78,7 +149,7 @@ class Firework{
                 vx:Math.cos(angle)*speed,
                 vy:Math.sin(angle)*speed,
                 alpha:1,
-                size:Math.random()*6+2
+                size:Math.random()*1+0.5
             });
         }
     }
@@ -91,139 +162,62 @@ class Firework{
     }
     draw(){
         this.p.forEach(pt=>{
-            ctx.globalAlpha=pt.alpha;
-            drawHeart(pt.x,pt.y,pt.size,"#ff4da6");
+            drawHeart(pt.x,pt.y,pt.size,"#ff4da6",pt.alpha);
         });
-        ctx.globalAlpha=1;
     }
-}
-
-function drawHeart(x,y,size,color){
-    ctx.save();
-    ctx.translate(x,y);
-    ctx.scale(size/10,size/10);
-    ctx.beginPath();
-    ctx.moveTo(0,0);
-    ctx.bezierCurveTo(0,-3,-5,-3,-5,0);
-    ctx.bezierCurveTo(-5,3,0,6,0,8);
-    ctx.bezierCurveTo(0,6,5,3,5,0);
-    ctx.bezierCurveTo(5,-3,0,-3,0,0);
-    ctx.fillStyle=color;
-    ctx.fill();
-    ctx.restore();
-}
-
-function heartShapePoints(scale){
-    let pts=[];
-    for(let t=0;t<Math.PI*2;t+=0.01){
-        let x=16*Math.pow(Math.sin(t),3);
-        let y=-(13*Math.cos(t)-5*Math.cos(2*t)-2*Math.cos(3*t)-Math.cos(4*t));
-        let dist=Math.sqrt(x*x+y*y);
-        if(dist>12){ //chỉ viền để tạo rỗng
-            pts.push({
-                x:canvas.width/2 + x*scale,
-                y:canvas.height/2 + y*scale
-            });
-        }
-    }
-    return pts;
-}
-
-let heartPoints=heartShapePoints(15);
-
-function spawnHeart3D(){
-    heartPoints.forEach(pt=>{
-        if(Math.random()<0.6){
-            particles.push(new Particle(
-                pt.x + (Math.random()-0.5)*8,
-                pt.y + (Math.random()-0.5)*8,
-                Math.random()*6+4,
-                Math.random()<0.5?"#ff66b2":"#ffffff"
-            ));
-        }
-    });
 }
 
 function spawnFirework(){
     fireworks.push(new Firework());
 }
 
-function textParticles(text){
-    let tempCanvas=document.createElement("canvas");
-    let tempCtx=tempCanvas.getContext("2d");
-    tempCanvas.width=canvas.width;
-    tempCanvas.height=canvas.height;
-    tempCtx.fillStyle="white";
-    tempCtx.font="bold 60px Arial";
-    tempCtx.textAlign="center";
-    tempCtx.fillText(text,canvas.width/2,canvas.height/2);
-    let data=tempCtx.getImageData(0,0,tempCanvas.width,tempCanvas.height);
-    let pts=[];
-    for(let y=0;y<data.height;y+=4){
-        for(let x=0;x<data.width;x+=4){
-            let index=(y*data.width+x)*4;
-            if(data.data[index+3]>128){
-                pts.push({x,y});
-            }
-        }
-    }
-    return pts;
-}
-
-let textPts=[];
-
 function animate(){
     ctx.fillStyle="rgba(0,0,0,0.2)";
     ctx.fillRect(0,0,canvas.width,canvas.height);
 
-    if(mode===0){
+    if(phase===0){
         if(Math.random()<0.05) spawnFirework();
-        spawnHeart3D();
 
-        fireworks.forEach(f=>{f.update();f.draw();});
-        particles.forEach((p,i)=>{
-            p.update();
-            p.draw();
-            if(p.alpha<=0) particles.splice(i,1);
-        });
-
-        transitionTime++;
-        if(transitionTime>400){
-            mode=1;
-            textPts=textParticles("Đình Hường   ❤   Khánh Linh");
-            particles=[];
-        }
-    }
-    else{
-        textPts.forEach(pt=>{
-            if(Math.random()<0.1){
-                particles.push(new Particle(pt.x,pt.y,Math.random()*3+1,"white"));
+        mainHeart.forEach(pt=>{
+            if(Math.random()<0.4){
+                particles.push(new Particle(
+                    Math.random()*canvas.width,
+                    Math.random()*canvas.height,
+                    pt.x,pt.y,
+                    Math.random()<0.5?"#ff66b2":"#ffffff"
+                ));
             }
         });
 
-        particles.forEach((p,i)=>{
-            p.alpha=1;
-            p.draw();
-        });
+        fireworks.forEach(f=>{f.update();f.draw();});
+        particles.forEach(p=>{p.update();p.draw();});
 
-        let time=Date.now()/1000;
-        ctx.fillStyle="rgba(255,255,255,0.1)";
-        ctx.font="bold 60px Arial";
-        ctx.textAlign="center";
-
-        ctx.fillText("Đình Hường ",
-            canvas.width/2 - 120 + Math.sin(time)*10,
-            canvas.height/2);
-
-        ctx.fillText("Khánh Linh",
-            canvas.width/2 + 120 - Math.sin(time)*10,
-            canvas.height/2);
+        if(Date.now()-startTime>3000){
+            phase=1;
+            document.querySelector(".textContainer").style.opacity=1;
+        }
     }
-
     requestAnimationFrame(animate);
 }
-
 animate();
+
+/* Xoay vòng chữ */
+const left=document.getElementById("left");
+const right=document.getElementById("right");
+const heart=document.getElementById("heart");
+
+let angle=0;
+function rotateText(){
+    if(phase===1){
+        angle+=0.01;
+        let radius=40;
+        left.style.transform=`translate(${-radius*Math.cos(angle)}px, ${-radius*Math.sin(angle)}px) rotate(${angle}rad)`;
+        right.style.transform=`translate(${radius*Math.cos(angle)}px, ${radius*Math.sin(angle)}px) rotate(${angle}rad)`;
+        heart.style.transform="translate(0,0)";
+    }
+    requestAnimationFrame(rotateText);
+}
+rotateText();
 </script>
 
 </body>
