@@ -14,7 +14,7 @@ padding:0;
 background:black;
 overflow:hidden;
 height:100%;
-font-family:'Great Vibes', cursive;
+font-family:'Great Vibes',cursive;
 }
 
 canvas{
@@ -23,65 +23,11 @@ top:0;
 left:0;
 }
 
-#textContainer{
-position:absolute;
-top:50%;
-left:50%;
-transform:translate(-50%,-50%);
-text-align:center;
-color:white;
-opacity:0;
-transition:opacity 2s ease;
-width:90vw;
-}
-
-.nameRow{
-display:flex;
-justify-content:center;
-align-items:center;
-gap:20px;
-font-size:8vw;
-white-space:nowrap;
-}
-
-.rotLeft{
-animation:spinLeft 8s linear infinite;
-}
-
-.rotRight{
-animation:spinRight 8s linear infinite;
-}
-
-@keyframes spinLeft{
-0%{transform:rotate(0deg);}
-50%{transform:rotate(6deg);}
-100%{transform:rotate(0deg);}
-}
-
-@keyframes spinRight{
-0%{transform:rotate(0deg);}
-50%{transform:rotate(-6deg);}
-100%{transform:rotate(0deg);}
-}
-
-.heartCenter{
-font-size:7vw;
-color:#ff4da6;
-}
-
 </style>
 </head>
 <body>
 
 <canvas id="canvas"></canvas>
-
-<div id="textContainer">
-<div class="nameRow">
-<div class="rotLeft">Đình Hường</div>
-<div class="heartCenter">&lt;3</div>
-<div class="rotRight">Khánh Linh</div>
-</div>
-</div>
 
 <script>
 const canvas=document.getElementById("canvas");
@@ -95,41 +41,47 @@ h=canvas.height=window.innerHeight;
 resize();
 window.onresize=resize;
 
-let particles=[];
+/* ================= HEART 3D ================= */
+
+let heartParticles=[];
+let textParticles=[];
 let fireworks=[];
+let rotation=0;
+let state="forming"; // forming, stable, exploded, text
 let slowMotion=false;
 
 function heartShape(t){
 let x=16*Math.pow(Math.sin(t),3);
 let y=13*Math.cos(t)-5*Math.cos(2*t)-2*Math.cos(3*t)-Math.cos(4*t);
-return {x:x,y:-y};
+return {x,y:-y};
 }
 
 class Particle{
-constructor(x,y,color,size){
+constructor(x,y,size,color){
 this.x=x;
 this.y=y;
-this.color=color;
 this.size=size;
-this.speedX=(Math.random()-0.5)*4;
-this.speedY=(Math.random()-0.5)*4;
-this.targetX=null;
-this.targetY=null;
+this.color=color;
+this.tx=null;
+this.ty=null;
 this.opacity=1;
+this.sparkle=Math.random()*1000;
+this.vx=(Math.random()-0.5)*4;
+this.vy=(Math.random()-0.5)*4;
 }
 
 update(){
-if(this.targetX!==null){
-this.x+=(this.targetX-this.x)*0.05;
-this.y+=(this.targetY-this.y)*0.05;
+if(this.tx!==null){
+this.x+=(this.tx-this.x)*0.05;
+this.y+=(this.ty-this.y)*0.05;
 }else{
-this.x+=this.speedX;
-this.y+=this.speedY;
+this.x+=this.vx;
+this.y+=this.vy;
 }
 }
 
 draw(){
-ctx.globalAlpha=this.opacity;
+ctx.globalAlpha=this.opacity*(0.7+Math.sin(Date.now()*0.004+this.sparkle)*0.3);
 ctx.fillStyle=this.color;
 ctx.font=this.size+"px serif";
 ctx.fillText("❤",this.x,this.y);
@@ -137,61 +89,55 @@ ctx.globalAlpha=1;
 }
 }
 
-function createChaosHearts(){
-for(let i=0;i<400;i++){
-particles.push(new Particle(
+/* Chaos */
+for(let i=0;i<600;i++){
+heartParticles.push(new Particle(
 Math.random()*w,
 Math.random()*h,
-Math.random()>0.5?"#ff66b2":"#ffffff",
-Math.random()*18+8
+Math.random()*18+8,
+Math.random()>0.5?"#ff66b2":"#ffffff"
 ));
 }
-}
 
+/* Form 3D Heart */
 function formHeart(){
-let centerX=w/2;
-let centerY=h/2;
-for(let i=0;i<particles.length;i++){
+let cx=w/2;
+let cy=h/2;
+heartParticles.forEach(p=>{
 let t=Math.random()*Math.PI*2;
 let pos=heartShape(t);
-let scale=20;
-let edgeDensity=Math.random();
 
-if(edgeDensity<0.6){
-scale=22;
-particles[i].opacity=1;
-}else{
-scale=16;
-particles[i].opacity=0.7;
+let edge=Math.random();
+let scale=edge<0.6?20:15;
+p.opacity=edge<0.6?1:0.6;
+
+let depth=Math.cos(rotation);
+p.tx=cx+pos.x*scale*depth;
+p.ty=cy+pos.y*scale;
+});
 }
 
-particles[i].targetX=centerX+pos.x*scale;
-particles[i].targetY=centerY+pos.y*scale;
-}
-}
-
+/* Fireworks */
 function createFirework(){
 let x=Math.random()*w;
 let y=Math.random()*h*0.5;
-let count=Math.random()*20+20;
+let count=Math.random()*25+20;
 for(let i=0;i<count;i++){
 let angle=Math.random()*Math.PI*2;
 let speed=Math.random()*3+2;
 fireworks.push({
-x:x,
-y:y,
+x,y,
 dx:Math.cos(angle)*speed,
 dy:Math.sin(angle)*speed,
-size:Math.random()*10+6,
 life:60,
+size:Math.random()*10+6,
 color:Math.random()>0.5?"#ff66b2":"#ffffff"
 });
 }
 }
 
 function updateFireworks(){
-for(let i=0;i<fireworks.length;i++){
-let f=fireworks[i];
+fireworks.forEach(f=>{
 f.x+=f.dx;
 f.y+=f.dy;
 f.life--;
@@ -200,46 +146,102 @@ ctx.fillStyle=f.color;
 ctx.font=f.size+"px serif";
 ctx.fillText("❤",f.x,f.y);
 ctx.globalAlpha=1;
-}
+});
 fireworks=fireworks.filter(f=>f.life>0);
 }
 
+/* EXPLOSION */
+function explodeHeart(){
+heartParticles.forEach(p=>{
+p.tx=null;
+p.ty=null;
+p.vx=(Math.random()-0.5)*15;
+p.vy=(Math.random()-0.5)*15;
+});
+state="exploded";
+}
+
+/* TEXT FORMATION */
+function createTextParticles(){
+let off=document.createElement("canvas");
+let offCtx=off.getContext("2d");
+off.width=w;
+off.height=h;
+
+offCtx.fillStyle="white";
+offCtx.textAlign="center";
+offCtx.font="bold 80px 'Great Vibes'";
+offCtx.fillText("Đình Hường <3 Khánh Linh",w/2,h/2);
+
+let data=offCtx.getImageData(0,0,w,h).data;
+
+for(let y=0;y<h;y+=6){
+for(let x=0;x<w;x+=6){
+let index=(y*w+x)*4;
+if(data[index+3]>150){
+textParticles.push(new Particle(
+Math.random()*w,
+Math.random()*h,
+Math.random()*6+3,
+"#ffffff"
+));
+let p=textParticles[textParticles.length-1];
+p.tx=x;
+p.ty=y;
+}
+}
+}
+
+state="text";
+}
+
+/* CLICK */
+canvas.addEventListener("click",()=>{
+if(state==="stable"){
+explodeHeart();
+setTimeout(()=>{
+slowMotion=true;
+heartParticles.forEach(p=>p.opacity=0.5);
+createTextParticles();
+},1200);
+}
+});
+
+/* ANIMATE */
 function animate(){
 ctx.fillStyle="rgba(0,0,0,0.2)";
 ctx.fillRect(0,0,w,h);
 
-particles.forEach(p=>{
+rotation+=0.01;
+
+if(state==="forming"||state==="stable"){
+formHeart();
+}
+
+heartParticles.forEach(p=>{
 if(slowMotion){
-p.x+=(p.targetX-p.x)*0.01;
-p.y+=(p.targetY-p.y)*0.01;
+p.tx=p.tx;
 }
 p.update();
 p.draw();
 });
 
-updateFireworks();
+if(state==="text"){
+textParticles.forEach(p=>{
+p.update();
+p.draw();
+});
+}
 
+updateFireworks();
 requestAnimationFrame(animate);
 }
 
-createChaosHearts();
+/* START */
+setTimeout(()=>{state="stable"},2000);
+setInterval(createFirework,800);
 animate();
 
-setTimeout(()=>{
-formHeart();
-},1500);
-
-setInterval(()=>{
-createFirework();
-},800);
-
-setTimeout(()=>{
-slowMotion=true;
-particles.forEach(p=>p.opacity=0.5);
-document.getElementById("textContainer").style.opacity=1;
-},4500);
-
 </script>
-
 </body>
 </html>
